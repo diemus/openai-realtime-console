@@ -62,7 +62,7 @@ export function ConsolePage() {
   const apiKey = LOCAL_RELAY_SERVER_URL
     ? ''
     : localStorage.getItem('tmp::voice_api_key') ||
-    prompt('OpenAI API Key') ||
+    prompt('请输入您在CloseAI的API Key') ||
     '';
   if (apiKey !== '') {
     localStorage.setItem('tmp::voice_api_key', apiKey);
@@ -150,7 +150,7 @@ export function ConsolePage() {
    * When you click the API key
    */
   const resetAPIKey = useCallback(() => {
-    const apiKey = prompt('OpenAI API Key');
+    const apiKey = prompt('请输入您在CloseAI的API Key');
     if (apiKey !== null) {
       localStorage.clear();
       localStorage.setItem('tmp::voice_api_key', apiKey);
