@@ -13,8 +13,8 @@ const LOCAL_RELAY_SERVER_URL: string =
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 
-import { RealtimeClient } from '@openai/realtime-api-beta';
-import { ItemType } from '@openai/realtime-api-beta/dist/lib/client.js';
+import { RealtimeClient } from '../lib/realtime-api/index.js';
+import { ItemType } from '../lib/realtime-api/client.js';
 import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
 import { instructions } from '../utils/conversation_config.js';
 import { WavRenderer } from '../utils/wav_renderer';
@@ -67,6 +67,11 @@ export function ConsolePage() {
   if (apiKey !== '') {
     localStorage.setItem('tmp::voice_api_key', apiKey);
   }
+
+  /**
+   * Model selection (default: gpt-realtime-mini)
+   */
+  const model = localStorage.getItem('tmp::voice_model') || 'gpt-realtime-mini';
 
   /**
    * Instantiate:
@@ -152,11 +157,21 @@ export function ConsolePage() {
   const resetAPIKey = useCallback(() => {
     const apiKey = prompt('请输入您在CloseAI的API Key');
     if (apiKey !== null) {
-      localStorage.clear();
       localStorage.setItem('tmp::voice_api_key', apiKey);
       window.location.reload();
     }
   }, []);
+
+  /**
+   * When you click the model
+   */
+  const resetModel = useCallback(() => {
+    const newModel = prompt('请输入模型名称', model);
+    if (newModel !== null && newModel !== '') {
+      localStorage.setItem('tmp::voice_model', newModel);
+      window.location.reload();
+    }
+  }, [model]);
 
   /**
    * Connect to conversation:
@@ -180,7 +195,7 @@ export function ConsolePage() {
     await wavStreamPlayer.connect();
 
     // Connect to realtime API
-    await client.connect();
+    await client.connect({ model });
     client.sendUserMessageContent([
       {
         type: `input_text`,
@@ -512,13 +527,22 @@ export function ConsolePage() {
         </div>
         <div className="content-api-key">
           {!LOCAL_RELAY_SERVER_URL && (
-            <Button
-              icon={Edit}
-              iconPosition="end"
-              buttonStyle="flush"
-              label={`api key: ${apiKey.slice(0, 3)}...`}
-              onClick={() => resetAPIKey()}
-            />
+            <>
+              <Button
+                icon={Edit}
+                iconPosition="end"
+                buttonStyle="flush"
+                label={`model: ${model}`}
+                onClick={() => resetModel()}
+              />
+              <Button
+                icon={Edit}
+                iconPosition="end"
+                buttonStyle="flush"
+                label={`api key: ${apiKey.slice(0, 3)}...`}
+                onClick={() => resetAPIKey()}
+              />
+            </>
           )}
         </div>
       </div>
