@@ -327,7 +327,7 @@ export class RealtimeClient extends RealtimeEventHandler {
     );
 
     // Handlers to update application state
-    this.realtime.on('server.conversation.item.created', (event) => {
+    this.realtime.on('server.conversation.item.added', (event) => {
       const { item } = handlerWithDispatch(event);
       this.dispatch('conversation.item.appended', { item });
       if (item.status === 'completed') {
@@ -341,11 +341,11 @@ export class RealtimeClient extends RealtimeEventHandler {
       handlerWithDispatch,
     );
     this.realtime.on(
-      'server.response.audio_transcript.delta',
+      'server.response.output_audio_transcript.delta',
       handlerWithDispatch,
     );
-    this.realtime.on('server.response.audio.delta', handlerWithDispatch);
-    this.realtime.on('server.response.text.delta', handlerWithDispatch);
+    this.realtime.on('server.response.output_audio.delta', handlerWithDispatch);
+    this.realtime.on('server.response.output_text.delta', handlerWithDispatch);
     this.realtime.on(
       'server.response.function_call_arguments.delta',
       handlerWithDispatch,
@@ -537,7 +537,45 @@ export class RealtimeClient extends RealtimeEventHandler {
     const session = { ...this.sessionConfig };
     session.tools = useTools;
     if (this.realtime.isConnected()) {
-      this.realtime.send('session.update', { session });
+      // GA 接口改用嵌套 shape：type + output_modalities + audio.input/output。
+      // 这里把内部保留的 beta 风格字段翻译为 GA session 再发送。
+      const toGAFormat = (f) =>
+        f === 'pcm16'
+          ? { type: 'audio/pcm', rate: 24000 }
+          : f === 'g711_ulaw'
+          ? { type: 'audio/pcmu' }
+          : f === 'g711_alaw'
+          ? { type: 'audio/pcma' }
+          : f;
+      const input = {};
+      if (session.input_audio_format !== undefined)
+        input.format = toGAFormat(session.input_audio_format);
+      if (session.input_audio_transcription !== undefined)
+        input.transcription = session.input_audio_transcription;
+      if (session.turn_detection !== undefined)
+        input.turn_detection = session.turn_detection;
+      const output = {};
+      if (session.output_audio_format !== undefined)
+        output.format = toGAFormat(session.output_audio_format);
+      if (session.voice !== undefined) output.voice = session.voice;
+      const gaSession = { type: 'realtime' };
+      // GA 不允许同时 text+audio，包含 audio 时锁定为 audio
+      if (session.modalities !== undefined)
+        gaSession.output_modalities = session.modalities.includes('audio')
+          ? ['audio']
+          : session.modalities;
+      if (session.instructions !== undefined)
+        gaSession.instructions = session.instructions;
+      if (session.tools !== undefined) gaSession.tools = session.tools;
+      if (session.tool_choice !== undefined)
+        gaSession.tool_choice = session.tool_choice;
+      // 注意：GA realtime session 已无 temperature 字段，故意不映射
+      if (session.max_response_output_tokens !== undefined)
+        gaSession.max_output_tokens = session.max_response_output_tokens;
+      if (Object.keys(input).length) gaSession.audio = { input };
+      if (Object.keys(output).length)
+        gaSession.audio = { ...(gaSession.audio || {}), output };
+      this.realtime.send('session.update', { session: gaSession });
     }
     return true;
   }

@@ -76,7 +76,6 @@ export class RealtimeAPI extends RealtimeEventHandler {
       const ws = new WebSocket(`${this.url}${model ? `?model=${model}` : ''}`, [
         'realtime',
         `openai-insecure-api-key.${this.apiKey}`,
-        'openai-beta.realtime-v1',
       ]);
       ws.addEventListener('message', (event) => {
         const message = JSON.parse(event.data);

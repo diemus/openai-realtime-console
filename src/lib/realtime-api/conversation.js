@@ -19,7 +19,7 @@ export class RealtimeConversation {
   defaultFrequency = 24_000; // 24,000 Hz
 
   EventProcessors = {
-    'conversation.item.created': (event) => {
+    'conversation.item.added': (event) => {
       const { item } = event;
       // deep copy values
       const newItem = JSON.parse(JSON.stringify(item));
@@ -186,23 +186,23 @@ export class RealtimeConversation {
       item.content.push(part);
       return { item, delta: null };
     },
-    'response.audio_transcript.delta': (event) => {
+    'response.output_audio_transcript.delta': (event) => {
       const { item_id, content_index, delta } = event;
       const item = this.itemLookup[item_id];
       if (!item) {
         throw new Error(
-          `response.audio_transcript.delta: Item "${item_id}" not found`,
+          `response.output_audio_transcript.delta: Item "${item_id}" not found`,
         );
       }
       item.content[content_index].transcript += delta;
       item.formatted.transcript += delta;
       return { item, delta: { transcript: delta } };
     },
-    'response.audio.delta': (event) => {
+    'response.output_audio.delta': (event) => {
       const { item_id, content_index, delta } = event;
       const item = this.itemLookup[item_id];
       if (!item) {
-        throw new Error(`response.audio.delta: Item "${item_id}" not found`);
+        throw new Error(`response.output_audio.delta: Item "${item_id}" not found`);
       }
       // This never gets renderered, we care about the file data instead
       // item.content[content_index].audio += delta;
@@ -214,11 +214,11 @@ export class RealtimeConversation {
       );
       return { item, delta: { audio: appendValues } };
     },
-    'response.text.delta': (event) => {
+    'response.output_text.delta': (event) => {
       const { item_id, content_index, delta } = event;
       const item = this.itemLookup[item_id];
       if (!item) {
-        throw new Error(`response.text.delta: Item "${item_id}" not found`);
+        throw new Error(`response.output_text.delta: Item "${item_id}" not found`);
       }
       item.content[content_index].text += delta;
       item.formatted.text += delta;
